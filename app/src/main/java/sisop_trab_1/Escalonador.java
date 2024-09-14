@@ -6,6 +6,9 @@ import java.util.List;
 public class Escalonador {
 
     private List<Processo> listaProcessos = new ArrayList<Processo>();
+    private int tempoGlobal;
+    private int tempoUsoCPU;
+    private int processosFinalizados;
 
     public void addProcesso(Processo processo) {
         listaProcessos.add(processo);
@@ -19,105 +22,346 @@ public class Escalonador {
         // criando processos de teste
         Processo p1 = new Processo();
         p1.setNomeProcesso(1);
-        p1.setSurtoCPU(0);
-        p1.setTempoES(0);
-        p1.setTempoTotal(10);
+        p1.setSurtoCPU(2);
+        p1.setTempoES(5);
+        p1.setTempoTotal(6);
         p1.setOrdem(1);
         p1.setPrioridade(3);
 
         Processo p2 = new Processo();
         p2.setNomeProcesso(2);
-        p2.setSurtoCPU(0);
-        p2.setTempoES(0);
-        p2.setTempoTotal(10);
+        p2.setSurtoCPU(3);
+        p2.setTempoES(10);
+        p2.setTempoTotal(6);
         p2.setOrdem(2);
-        p2.setPrioridade(4);
+        p2.setPrioridade(3);
+
+        Processo p3 = new Processo();
+        p3.setNomeProcesso(3);
+        p3.setSurtoCPU(0);
+        p3.setTempoES(0);
+        p3.setTempoTotal(14);
+        p3.setOrdem(3);
+        p3.setPrioridade(3);
+
+        Processo p4 = new Processo();
+        p4.setNomeProcesso(4);
+        p4.setSurtoCPU(0);
+        p4.setTempoES(0);
+        p4.setTempoTotal(10);
+        p4.setOrdem(4);
+        p4.setPrioridade(3);
+
+        // inicializando o tempo de cpu
+        tempoGlobal = 0;
+        // 
+        tempoUsoCPU = 0;
+
+        processosFinalizados = 0;
 
         addProcesso(p1);
         addProcesso(p2);
+        addProcesso(p3);
+        addProcesso(p4);
 
         escalonarProcesso();
 
     }
 
     public void escalonarProcesso() {
-        
 
-        while (!listaProcessos.isEmpty()) {// enquanto houver processos na lista
-            int creditoMax = 0;
-            int indice = 0;
+        while (!todosProcessosFinalizados()) {// enquanto houver processos na lista
 
-           // System.out.println("passo- 1");
-            todosProcessosCreditoZero(); // verifica se todos os processos estão com credito 0 para atualizar o credito
-           // System.out.println("passo -2 ");
-            for (int i = 0; i < listaProcessos.size(); i++) {// achando o processo com maior prioridade
+          //  try {
+          //      Thread.sleep(100); // Sleep for 1 second
+          //  } catch (InterruptedException e) {
+          //      e.printStackTrace();
+          //  }
+            // olha se as condicoes para trocar processo running sao verdadeiras( se nao tem
+            // processo running e se tem processo ready com credito maior que 0)
+            if (!existeProcessoRunning() && existeProcessoReadyCreditoMaior()) {
+                trocaProcessoRunning(); // troca de contexto
+            }
 
-                Processo processo = listaProcessos.get(i);
+            // vrifica se oc proecesso running vai para blocked ou se terminou
+            if (existeProcessoRunning()) {
+                verificarRunning();
+            }
 
-                if (processo.getEstado() == Processo.Estado.READY) {
-                    int credito = processo.getCredito();
+            // executa o processo running
+            if (existeProcessoRunning()) {
+                executaProcesso();
+              
+            } else { // caso nao exista nenhum processo running
+                if (!existeProcessoRunning() && existeProcessoReadyCreditoMaior()) {
+                    trocaProcessoRunning(); // acha um processo para rodar
+                    executaProcesso(); // roda o processo
+                }else{
+                    System.out.println("Nenhum processo para rodar");
+                    
+                }
+            }
 
-                    if (credito > creditoMax) {
-                        creditoMax = credito;
-                        indice = i;
+            if (existeProcessoBlocked()) {
+                voltaBloqueio();// verifica se tem processos bloqueados para voltar para a fila de ready
+            }
+
+
+
+            turnaroundTime();
+            responseTime();
+            
+            
+            tempoGlobal++;// todo ciclo ele aumenta o tempo de cpu
+
+
+
+            System.out.println("\nFINAL -------------------------------------------------");
+            System.out.println("Tempo Global: " + tempoGlobal);  
+            calcularUtilizacaoCpu();
+            calcularThroughput();
+            listaProcessos.forEach(processo ->
+            System.out.println("Processo " + processo.getNomeProcesso() +
+                    " -> Estado: " + processo.getEstado() +
+                    " ->  Credito: " + processo.getCredito() +
+                   // " ->  Ordem: " + processo.getOrdem() +
+                    " -> Tempo CPU: " +  (((double) processo.getTempoCPU() / tempoGlobal) * 100) + "%" +
+                    " -> Turnaround Time: " + processo.getTurnaroundTime()+
+                    " -> Response Time: " + (processo.getResponseTime()) +
+                    " -> Wait Time: " + processo.getWaitTime()
+                    
+            ));
+              
+                  //  "  -> Surto CPU atual: " + processo.getSurtoCPUAtual() +
+                  //  "  -> tempo es atual: " + processo.getTempoESatual() +
+                   // "  -> surtocpu: " + processo.getSurtoCPU() +
+                   // "  -> tempo es: " + processo.getTempoES() +
+                   // "  -> Tempo Total: " + processo.getTempoTotal()));
+            System.out.println("FINAL -------------------------------------------------\n");
+        }
+
+    }
+
+    // OK
+    // Só pode ser chamado se existir pelo menos 1 processo que etsá no estado READY
+    // com credito maior que 0, sei que não tem ningum em running
+    public void trocaProcessoRunning() {
+
+        int creditoMax = 0; // credito de um processo da lista que será comparado
+        int indice = 0; // indice do processo com maior credito maximo
+
+        for (int i = 0; i < listaProcessos.size(); i++) {// achando o processo com maior prioridade
+            Processo processo = listaProcessos.get(i);
+            if (processo.getEstado() == Processo.Estado.READY) {
+                int credito = processo.getCredito();
+                if (credito > creditoMax) { // se o credito do processo for maior que o creditoMax
+                    creditoMax = credito;
+                    indice = i;
+                } else {
+                    if (credito == creditoMax) { // desempate pela ordem
+                        if (processo.getOrdem() < listaProcessos.get(indice).getOrdem()) {
+                            indice = i;
+                        }
                     }
+                }
+            }
+        }
+        System.out.println("Processo " + listaProcessos.get(indice).getNomeProcesso() + " escolhido");
+        listaProcessos.get(indice).setEstado(Processo.Estado.RUNNING);
+        listaProcessos.get(indice).setResponse(true);
+        //listaProcessos.get(indice).setExecutado(true);
+    }
+
+    public void verificarRunning() {
+        for (int i = 0; i < listaProcessos.size(); i++) {
+            if (listaProcessos.get(i).getEstado() == Processo.Estado.RUNNING) {
+                
+                if (listaProcessos.get(i).getTempoTotal() == 0) {
+                    System.out.println("Processo " + listaProcessos.get(i).getNomeProcesso() + " finalizado");
+                    listaProcessos.get(i).setEstado(Processo.Estado.EXIT);
+                    // mudarOrdemTodosProcessos(listaProcessos.get(i));
+                    todosProcessosCreditoZero(); // verifica se todos os processos da fila de ready estão com credito 0
+                    listaProcessos.get(i).setExecutado(false);
+                    processosFinalizados++;
+                    return;
+                }
+
+                if (listaProcessos.get(i).getSurtoCPUAtual() == 0 && listaProcessos.get(i).getTempoES() > 0) {
+                    listaProcessos.get(i).setEstado(Processo.Estado.BLOCKED);
+                    System.out.println(
+                            "Processo " + listaProcessos.get(i).getNomeProcesso() + " foi para fila de bloqueado");
+                    listaProcessos.get(i).setSurtoCPUAtual(listaProcessos.get(i).getSurtoCPU());
+                    // mudarOrdemTodosProcessos(listaProcessos.get(i));
+                    todosProcessosCreditoZero(); // verifica se todos os processos da fila de ready estão com credito 0
+
+                    return;
+                }
+
+                if (listaProcessos.get(i).getCredito() == 0) {
+                    System.out.println("Processo " + listaProcessos.get(i).getNomeProcesso()
+                            + " voltando para a fila de ready");
+                    listaProcessos.get(i).setEstado(Processo.Estado.READY);
+                    mudarOrdemTodosProcessos(listaProcessos.get(i));
+                    todosProcessosCreditoZero(); // verifica se todos os processos da fila de ready estão com credito 0
+
+                    return;
                 }
 
             }
-          //  System.out.println("passo -3 ");
-            executaProcesso(listaProcessos.get(indice));
-           // System.out.println("passo -4 ");
+        }
+    }
 
+    public void executaProcesso() {
+
+        for (int i = 0; i < listaProcessos.size(); i++) {
+            if (listaProcessos.get(i).getEstado() == Processo.Estado.RUNNING) {// achei o processo running
+                listaProcessos.get(i).setSurtoCPUAtual(listaProcessos.get(i).getSurtoCPUAtual() - 1);
+                listaProcessos.get(i).setTempoTotal(listaProcessos.get(i).getTempoTotal() - 1);
+                listaProcessos.get(i).setCredito(listaProcessos.get(i).getCredito() - 1);
+                tempoUsoCPU++;
+                listaProcessos.get(i).setTempoCPU(listaProcessos.get(i).getTempoCPU() + 1);
+                return;
+            }
+        }
+
+    }
+
+    public void voltaBloqueio() {
+
+        for (int i = 0; i < listaProcessos.size(); i++) {
+
+            if (listaProcessos.get(i).getEstado() == Processo.Estado.BLOCKED) {
+
+                if (listaProcessos.get(i).getTempoESatual() == 0) {
+                    System.out.println("Processo " + listaProcessos.get(i).getNomeProcesso() + " desbloqueado");
+                    listaProcessos.get(i).setEstado(Processo.Estado.READY);
+                    mudarOrdemTodosProcessos(listaProcessos.get(i));
+                    listaProcessos.get(i).setTempoESatual(listaProcessos.get(i).getTempoES());
+
+                } else {
+                    listaProcessos.get(i).setTempoESatual(listaProcessos.get(i).getTempoESatual() - 1);
+                    listaProcessos.get(i).setWaitTime(listaProcessos.get(i).getWaitTime() + 1);
+
+                    System.out.println("Tempo de E/S: " + listaProcessos.get(i).getTempoESatual() + " do processo "
+                            + listaProcessos.get(i).getNomeProcesso());
+                }
+            }
         }
 
     }
 
     public void todosProcessosCreditoZero() {
-       // System.out.println("passo 1 -> 1");
+
         for (int i = 0; i < listaProcessos.size(); i++) {
             Processo processo = listaProcessos.get(i);
             if (processo.getEstado() == Processo.Estado.READY) {
-                if (processo.getCredito() != 0) {
+                if (processo.getCredito() > 0) {
+                    // System.out.println("Ainda tem um Processo com credito maior que 0 no estado
+                    // READY");
                     return;
                 }
             }
         }
-      //  System.out.println("passo 1 -> 2");
+
         atualizaCredito(); // se todos os processos da fila de ready estiverem com credito 0, atualiza o
                            // credito
-                          // System.out.println("passo 1 -> 3");
     }
 
     public void atualizaCredito() {
-        //System.out.println("passo 1 -> 2 -> 1");
-      //  System.out.println("Atualizando o credito dos processos");
+        System.out.println("Atualizando creditos");
         for (int i = 0; i < listaProcessos.size(); i++) {
-            int credito = (listaProcessos.get(i).getCredito() / 2) + listaProcessos.get(i).getPrioridade();
-            listaProcessos.get(i).setCredito(credito);
+            if (listaProcessos.get(i).getEstado() != Processo.Estado.EXIT) {
+                int credito = (listaProcessos.get(i).getCredito() / 2) + listaProcessos.get(i).getPrioridade();
+                listaProcessos.get(i).setCredito(credito);
+            }
+
         }
-      //  System.out.println("passo 1 -> 2 -> 2");
     }
 
-    public void executaProcesso(Processo processo) {
-       // System.out.println("Executando processo " + processo.getNomeProcesso());
+    // aqui mexer quando nao quiser aumentar creditos de processos bloqueados pois
+    // isso nao deixa o exemplo igual
 
+    public void mudarOrdemTodosProcessos(Processo processo) {
 
-        processo.setEstado(Processo.Estado.RUNNING);
+        listaProcessos.get(listaProcessos.indexOf(processo)).setOrdem(listaProcessos.size() - 1); // fica em ultimo da
+                                                                                                  // ordem
 
-        //Executando o processo
-        while(processo.getEstado() == Processo.Estado.RUNNING){
-            System.out.println("Processo " + processo.getNomeProcesso() + " executando e possui " + processo.getCredito()
-            + " de credito");
-            processo.setCredito(processo.getCredito() - 1);
-    
-            if (processo.getCredito() == 0) {//acabou os creditos acaba o processo
-                processo.setEstado(Processo.Estado.EXIT);
-                System.out.println("Processo " + processo.getNomeProcesso() + " Acabou");
-                removeProcesso(processo);
+        for (int i = 0; i < listaProcessos.size(); i++) {
+
+            if (listaProcessos.indexOf(processo) != i) {
+                listaProcessos.get(i).setOrdem(listaProcessos.get(i).getOrdem() - 1);
             }
         }
 
-
     }
+
+    public boolean existeProcessoRunning() {
+        for (Processo processo : listaProcessos) {
+            if (processo.getEstado() == Processo.Estado.RUNNING) {
+                return true; // Encontrou pelo menos um processo em estado RUNNING
+            }
+        }
+        return false; // Nenhum processo em estado RUNNING foi encontrado
+    }
+
+    public boolean existeProcessoReadyCreditoMaior() {
+        for (Processo processo : listaProcessos) {
+            if (processo.getEstado() == Processo.Estado.READY && processo.getCredito() > 0) {
+                return true; // Encontrou pelo menos um processo em estado READY
+            }
+        }
+        return false; // Nenhum processo em estado READY foi encontrado
+    }
+
+    public boolean existeProcessoBlocked() {
+        for (Processo processo : listaProcessos) {
+            if (processo.getEstado() == Processo.Estado.BLOCKED) {
+                System.out.println("Processo " + processo.getNomeProcesso() + " bloqueado");
+                return true; // Encontrou pelo menos um processo em estado BLOCKED
+            }
+        }
+        System.out.println("Nenhum processo bloqueado");
+        return false; // Nenhum processo em estado BLOCKED foi encontrado
+    }
+
+    public boolean todosProcessosFinalizados() {
+        for (Processo processo : listaProcessos) {
+            if (processo.getEstado() != Processo.Estado.EXIT) {
+                return false; // Encontrou pelo menos um processo que não foi finalizado
+            }
+        }
+        return true; // Todos os processos foram finalizados
+    }
+
+
+    public void calcularUtilizacaoCpu() {
+        double utilizacaoCpu = ((double) tempoUsoCPU / tempoGlobal) * 100;
+        System.out.println(String.format("Utilização de CPU TOTAL: %.2f%%", utilizacaoCpu));
+        System.out.println(String.format("Tempo que a CPU nao foi utilizada:  %.2f%%", (100 - utilizacaoCpu)));
+    }
+
+    public void calcularThroughput() {
+        double throughput = (double) processosFinalizados / tempoGlobal;
+        System.out.println(String.format("Throughput: %.2f", throughput));
+    }
+
+
+    public void turnaroundTime(){
+        for (int i = 0; i < listaProcessos.size(); i++) {
+            if (listaProcessos.get(i).isExecutado()) {
+                listaProcessos.get(i).setTurnaroundTime(listaProcessos.get(i).getTurnaroundTime() + 1);
+    }
+        }
+    }
+
+    public void responseTime(){
+        for (int i = 0; i < listaProcessos.size(); i++) {
+            if (listaProcessos.get(i).isExecutado() && listaProcessos.get(i).isResponse() && listaProcessos.get(i).getResponseTime() <  0) {
+                listaProcessos.get(i).setResponse(true);
+                listaProcessos.get(i).setResponseTime(tempoGlobal);
+            }
+        }
+    }
+
 
 }
