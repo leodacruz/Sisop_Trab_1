@@ -4,7 +4,11 @@ public class Processo {
     private Estado estado;
     private int nomeProcesso;
     private int surtoCPU;
+    private int surtoCPUAtual;
+    
     private int tempoES;
+    private int tempoESatual;
+    
     private int tempoTotal;
     private int ordem;
     private int prioridade;
@@ -37,6 +41,7 @@ public class Processo {
 
     public void setSurtoCPU(int surtoCPU) {
         this.surtoCPU = surtoCPU;
+        this.surtoCPUAtual = surtoCPU;
     }
 
     public int getTempoES() {
@@ -45,6 +50,7 @@ public class Processo {
 
     public void setTempoES(int tempoES) {
         this.tempoES = tempoES;
+        this.tempoESatual = tempoES;
     }
 
     public int getTempoTotal() {
@@ -69,7 +75,7 @@ public class Processo {
 
     public void setPrioridade(int prioridade) {
         this.prioridade = prioridade;
-       // this.credito = prioridade;
+        this.credito = prioridade;
     }
 
     public int getCredito() {
@@ -82,6 +88,22 @@ public class Processo {
 
     public enum Estado {
         READY, RUNNING, BLOCKED, EXIT
+    }
+
+    public int getTempoESatual() {
+        return tempoESatual;
+    }
+
+    public void setTempoESatual(int tempoESatual) {
+        this.tempoESatual = tempoESatual;
+    }
+
+    public int getSurtoCPUAtual() {
+        return surtoCPUAtual;
+    }
+
+    public void setSurtoCPUAtual(int surtoCPUAtual) {
+        this.surtoCPUAtual = surtoCPUAtual;
     }
 
 }
