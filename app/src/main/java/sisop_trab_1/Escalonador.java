@@ -7,6 +7,8 @@ public class Escalonador {
 
     private List<Processo> listaProcessos = new ArrayList<Processo>();
     private int tempoGlobal;
+    private int tempoUsoCPU;
+    private int processosFinalizados;
 
     public void addProcesso(Processo processo) {
         listaProcessos.add(processo);
@@ -52,6 +54,10 @@ public class Escalonador {
 
         // inicializando o tempo de cpu
         tempoGlobal = 0;
+        // 
+        tempoUsoCPU = 0;
+
+        processosFinalizados = 0;
 
         addProcesso(p1);
         addProcesso(p2);
@@ -85,10 +91,14 @@ public class Escalonador {
             // executa o processo running
             if (existeProcessoRunning()) {
                 executaProcesso();
+              
             } else { // caso nao exista nenhum processo running
                 if (!existeProcessoRunning() && existeProcessoReadyCreditoMaior()) {
                     trocaProcessoRunning(); // acha um processo para rodar
                     executaProcesso(); // roda o processo
+                }else{
+                    System.out.println("Nenhum processo para rodar");
+                    
                 }
             }
 
@@ -96,23 +106,37 @@ public class Escalonador {
                 voltaBloqueio();// verifica se tem processos bloqueados para voltar para a fila de ready
             }
 
-            // if (!existeProcessoRunning()) {
-            // trocaProcessoRunning(); // troca de contexto
 
-            // }
 
+            turnaroundTime();
+            responseTime();
+            
+            
             tempoGlobal++;// todo ciclo ele aumenta o tempo de cpu
+
+
+
             System.out.println("\nFINAL -------------------------------------------------");
-            System.out.println("Tempo Global: " + tempoGlobal);
-            listaProcessos.forEach(processo -> System.out.println("Processo " + processo.getNomeProcesso() +
+            System.out.println("Tempo Global: " + tempoGlobal);  
+            calcularUtilizacaoCpu();
+            calcularThroughput();
+            listaProcessos.forEach(processo ->
+            System.out.println("Processo " + processo.getNomeProcesso() +
                     " -> Estado: " + processo.getEstado() +
                     " ->  Credito: " + processo.getCredito() +
-                    " ->  Ordem: " + processo.getOrdem() +
-                    "  -> Surto CPU atual: " + processo.getSurtoCPUAtual() +
-                    "  -> tempo es atual: " + processo.getTempoESatual() +
-                    "  -> surtocpu: " + processo.getSurtoCPU() +
-                    "  -> tempo es: " + processo.getTempoES() +
-                    "  -> Tempo Total: " + processo.getTempoTotal()));
+                   // " ->  Ordem: " + processo.getOrdem() +
+                    " -> Tempo CPU: " +  (((double) processo.getTempoCPU() / tempoGlobal) * 100) + "%" +
+                    " -> Turnaround Time: " + processo.getTurnaroundTime()+
+                    " -> Response Time: " + (processo.getResponseTime()) +
+                    " -> Wait Time: " + processo.getWaitTime()
+                    
+            ));
+              
+                  //  "  -> Surto CPU atual: " + processo.getSurtoCPUAtual() +
+                  //  "  -> tempo es atual: " + processo.getTempoESatual() +
+                   // "  -> surtocpu: " + processo.getSurtoCPU() +
+                   // "  -> tempo es: " + processo.getTempoES() +
+                   // "  -> Tempo Total: " + processo.getTempoTotal()));
             System.out.println("FINAL -------------------------------------------------\n");
         }
 
@@ -144,17 +168,21 @@ public class Escalonador {
         }
         System.out.println("Processo " + listaProcessos.get(indice).getNomeProcesso() + " escolhido");
         listaProcessos.get(indice).setEstado(Processo.Estado.RUNNING);
+        listaProcessos.get(indice).setResponse(true);
+        //listaProcessos.get(indice).setExecutado(true);
     }
 
     public void verificarRunning() {
         for (int i = 0; i < listaProcessos.size(); i++) {
             if (listaProcessos.get(i).getEstado() == Processo.Estado.RUNNING) {
+                
                 if (listaProcessos.get(i).getTempoTotal() == 0) {
                     System.out.println("Processo " + listaProcessos.get(i).getNomeProcesso() + " finalizado");
                     listaProcessos.get(i).setEstado(Processo.Estado.EXIT);
                     // mudarOrdemTodosProcessos(listaProcessos.get(i));
                     todosProcessosCreditoZero(); // verifica se todos os processos da fila de ready estão com credito 0
-
+                    listaProcessos.get(i).setExecutado(false);
+                    processosFinalizados++;
                     return;
                 }
 
@@ -190,6 +218,8 @@ public class Escalonador {
                 listaProcessos.get(i).setSurtoCPUAtual(listaProcessos.get(i).getSurtoCPUAtual() - 1);
                 listaProcessos.get(i).setTempoTotal(listaProcessos.get(i).getTempoTotal() - 1);
                 listaProcessos.get(i).setCredito(listaProcessos.get(i).getCredito() - 1);
+                tempoUsoCPU++;
+                listaProcessos.get(i).setTempoCPU(listaProcessos.get(i).getTempoCPU() + 1);
                 return;
             }
         }
@@ -210,6 +240,7 @@ public class Escalonador {
 
                 } else {
                     listaProcessos.get(i).setTempoESatual(listaProcessos.get(i).getTempoESatual() - 1);
+                    listaProcessos.get(i).setWaitTime(listaProcessos.get(i).getWaitTime() + 1);
 
                     System.out.println("Tempo de E/S: " + listaProcessos.get(i).getTempoESatual() + " do processo "
                             + listaProcessos.get(i).getNomeProcesso());
@@ -301,5 +332,36 @@ public class Escalonador {
         }
         return true; // Todos os processos foram finalizados
     }
+
+
+    public void calcularUtilizacaoCpu() {
+        double utilizacaoCpu = ((double) tempoUsoCPU / tempoGlobal) * 100;
+        System.out.println(String.format("Utilização de CPU TOTAL: %.2f%%", utilizacaoCpu));
+        System.out.println(String.format("Tempo que a CPU nao foi utilizada:  %.2f%%", (100 - utilizacaoCpu)));
+    }
+
+    public void calcularThroughput() {
+        double throughput = (double) processosFinalizados / tempoGlobal;
+        System.out.println(String.format("Throughput: %.2f", throughput));
+    }
+
+
+    public void turnaroundTime(){
+        for (int i = 0; i < listaProcessos.size(); i++) {
+            if (listaProcessos.get(i).isExecutado()) {
+                listaProcessos.get(i).setTurnaroundTime(listaProcessos.get(i).getTurnaroundTime() + 1);
+    }
+        }
+    }
+
+    public void responseTime(){
+        for (int i = 0; i < listaProcessos.size(); i++) {
+            if (listaProcessos.get(i).isExecutado() && listaProcessos.get(i).isResponse() && listaProcessos.get(i).getResponseTime() <  0) {
+                listaProcessos.get(i).setResponse(true);
+                listaProcessos.get(i).setResponseTime(tempoGlobal);
+            }
+        }
+    }
+
 
 }
