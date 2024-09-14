@@ -1,7 +1,10 @@
 package sisop_trab_1;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
+
+import io.restassured.path.json.JsonPath;
 
 public class Escalonador {
 
@@ -10,63 +13,47 @@ public class Escalonador {
     private int tempoUsoCPU;
     private int processosFinalizados;
 
-    public void addProcesso(Processo processo) {
-        listaProcessos.add(processo);
-    }
 
-    public void removeProcesso(Processo processo) {
-        listaProcessos.remove(processo);
-    }
-
+    /**
+     * Prepara a execução do escalonador e executa o escalonamento dos processos
+     */
     public void execucaoEscalonar() {
-        // criando processos de teste
-        Processo p1 = new Processo();
-        p1.setNomeProcesso(1);
-        p1.setSurtoCPU(2);
-        p1.setTempoES(5);
-        p1.setTempoTotal(6);
-        p1.setOrdem(1);
-        p1.setPrioridade(3);
-
-        Processo p2 = new Processo();
-        p2.setNomeProcesso(2);
-        p2.setSurtoCPU(3);
-        p2.setTempoES(10);
-        p2.setTempoTotal(6);
-        p2.setOrdem(2);
-        p2.setPrioridade(3);
-
-        Processo p3 = new Processo();
-        p3.setNomeProcesso(3);
-        p3.setSurtoCPU(0);
-        p3.setTempoES(0);
-        p3.setTempoTotal(14);
-        p3.setOrdem(3);
-        p3.setPrioridade(3);
-
-        Processo p4 = new Processo();
-        p4.setNomeProcesso(4);
-        p4.setSurtoCPU(0);
-        p4.setTempoES(0);
-        p4.setTempoTotal(10);
-        p4.setOrdem(4);
-        p4.setPrioridade(3);
-
-        // inicializando o tempo de cpu
-        tempoGlobal = 0;
-        // 
-        tempoUsoCPU = 0;
-
-        processosFinalizados = 0;
-
-        addProcesso(p1);
-        addProcesso(p2);
-        addProcesso(p3);
-        addProcesso(p4);
-
-        escalonarProcesso();
-
+        tempoGlobal = 0;            // tempo global do sistema
+        tempoUsoCPU = 0;            // tempo que a cpu foi utilizada
+        processosFinalizados = 0;   // quantidade de processos finalizados
+        addProcesso();              // adiciona os processos do arquivo json
+        escalonarProcesso();        // escalona os processos
     }
+
+    /**
+     * Adiciona os processos do arquivo json na lista de processos
+     */
+    public void addProcesso() {
+
+        JsonPath jsonPath = new JsonPath(new File(System.getProperty("user.dir") 
+        + File.separator + "app" 
+        + File.separator + "src" 
+        + File.separator + "main"
+        + File.separator + "resources"
+        + File.separator + "processos.json"));
+
+        for (int i = 0; i < jsonPath.getList("processos").size(); i++) {
+            Processo processo1 = new Processo();
+            processo1.setNomeProcesso(jsonPath.getString("processos[" + i + "].nome"));//nome do processo
+            processo1.setSurtoCPU(jsonPath.getInt("processos[" + i + "].surtoCPU"));
+            processo1.setTempoES(jsonPath.getInt("processos[" + i + "].tempoES"));
+            processo1.setTempoTotal(jsonPath.getInt("processos[" + i + "].tempoTotal"));
+            processo1.setOrdem(jsonPath.getInt("processos[" + i + "].ordem"));
+            processo1.setPrioridade(jsonPath.getInt("processos[" + i + "].prioridade"));
+            listaProcessos.add(processo1);
+        }
+    }
+
+
+
+
+ 
+
 
     public void escalonarProcesso() {
 
@@ -142,9 +129,6 @@ public class Escalonador {
 
     }
 
-    // OK
-    // Só pode ser chamado se existir pelo menos 1 processo que etsá no estado READY
-    // com credito maior que 0, sei que não tem ningum em running
     public void trocaProcessoRunning() {
 
         int creditoMax = 0; // credito de um processo da lista que será comparado
@@ -278,9 +262,6 @@ public class Escalonador {
         }
     }
 
-    // aqui mexer quando nao quiser aumentar creditos de processos bloqueados pois
-    // isso nao deixa o exemplo igual
-
     public void mudarOrdemTodosProcessos(Processo processo) {
 
         listaProcessos.get(listaProcessos.indexOf(processo)).setOrdem(listaProcessos.size() - 1); // fica em ultimo da
@@ -333,7 +314,6 @@ public class Escalonador {
         return true; // Todos os processos foram finalizados
     }
 
-
     public void calcularUtilizacaoCpu() {
         double utilizacaoCpu = ((double) tempoUsoCPU / tempoGlobal) * 100;
         System.out.println(String.format("Utilização de CPU TOTAL: %.2f%%", utilizacaoCpu));
@@ -344,7 +324,6 @@ public class Escalonador {
         double throughput = (double) processosFinalizados / tempoGlobal;
         System.out.println(String.format("Throughput: %.2f", throughput));
     }
-
 
     public void turnaroundTime(){
         for (int i = 0; i < listaProcessos.size(); i++) {
@@ -362,6 +341,5 @@ public class Escalonador {
             }
         }
     }
-
 
 }

@@ -1,8 +1,9 @@
 package sisop_trab_1;
 
 public class Processo {
+
     private Estado estado;
-    private int nomeProcesso;
+    private String nomeProcesso;
     private int surtoCPU;
     private int surtoCPUAtual;
 
@@ -64,11 +65,11 @@ public class Processo {
         return estado;
     }
 
-    public int getNomeProcesso() {
+    public String getNomeProcesso() {
         return nomeProcesso;
     }
 
-    public void setNomeProcesso(int nomeProcesso) {
+    public void setNomeProcesso(String nomeProcesso) {
         this.nomeProcesso = nomeProcesso;
     }
 

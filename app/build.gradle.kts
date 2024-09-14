@@ -20,9 +20,16 @@ dependencies {
     testImplementation(libs.junit.jupiter)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+    // https://mvnrepository.com/artifact/io.rest-assured/rest-assured
+implementation("io.rest-assured:rest-assured:5.5.0")
 
+ implementation("io.rest-assured:json-path:5.5.0")
     // This dependency is used by the application.
     implementation(libs.guava)
+
+   
+
+
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

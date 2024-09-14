@@ -1,0 +1,36 @@
+{
+    "processos": [
+        {
+            "nome": "P1",	
+            "surtoCPU": 2,
+            "tempoES": 5,
+            "tempoTotal": 6,
+            "ordem": 1,
+            "prioridade": 3
+        },
+        {
+            "nome": "P2",	
+            "surtoCPU": 3,
+            "tempoES": 10,
+            "tempoTotal": 6,
+            "ordem": 2,
+            "prioridade": 3
+        },
+        {
+            "nome": "P3",	
+            "surtoCPU": 0,
+            "tempoES": 0,
+            "tempoTotal": 14,
+            "ordem": 3,
+            "prioridade": 3
+        },
+        {
+            "nome": "P4",	
+            "surtoCPU": 0,
+            "tempoES": 0,
+            "tempoTotal": 10,
+            "ordem": 4,
+            "prioridade": 3
+        }
+    ]
+}
