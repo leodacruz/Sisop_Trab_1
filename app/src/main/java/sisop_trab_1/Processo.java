@@ -129,7 +129,12 @@ public class Processo {
 
     public void setPrioridade(int prioridade) {
         this.prioridade = prioridade;
-        this.credito = prioridade;
+        if(prioridade==0){
+            this.credito = 1;
+        }else{
+        this.credito = prioridade;    
+        }
+        
     }
 
     public int getCredito() {
