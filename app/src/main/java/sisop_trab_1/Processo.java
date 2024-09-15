@@ -1,8 +1,9 @@
 package sisop_trab_1;
 
 public class Processo {
+
     private Estado estado;
-    private int nomeProcesso;
+    private String nomeProcesso;
     private int surtoCPU;
     private int surtoCPUAtual;
 
@@ -64,11 +65,11 @@ public class Processo {
         return estado;
     }
 
-    public int getNomeProcesso() {
+    public String getNomeProcesso() {
         return nomeProcesso;
     }
 
-    public void setNomeProcesso(int nomeProcesso) {
+    public void setNomeProcesso(String nomeProcesso) {
         this.nomeProcesso = nomeProcesso;
     }
 
@@ -128,7 +129,12 @@ public class Processo {
 
     public void setPrioridade(int prioridade) {
         this.prioridade = prioridade;
-        this.credito = prioridade;
+        if(prioridade==0){
+            this.credito = 1;
+        }else{
+        this.credito = prioridade;    
+        }
+        
     }
 
     public int getCredito() {
