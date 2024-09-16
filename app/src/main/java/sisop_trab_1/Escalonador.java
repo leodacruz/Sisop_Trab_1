@@ -5,8 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
-//import org.checkerframework.checker.units.qual.t;
-
 import io.restassured.path.json.JsonPath;
 
 public class Escalonador {
@@ -15,17 +13,19 @@ public class Escalonador {
     private int tempoGlobal;
     private int tempoUsoCPU;
     private int processosFinalizados;
-    private String tempoNaoExecutado; 
+    private int tamanhoOriginalListaProcessos;
+    private String tempoNaoExecutado;
     private String escalonadorRodando;
-    private boolean processosSaoAleatorios; 
+    private boolean processosSaoAleatorios;
+    private boolean existeProcessoRunning;
 
     public Escalonador() {
         listaProcessos = new ArrayList<Processo>();
-        tempoGlobal = 0; 
-        tempoUsoCPU = 0; 
-        processosFinalizados = 0; 
-        tempoNaoExecutado = ""; 
-        escalonadorRodando = ""; 
+        tempoGlobal = 0;
+        tempoUsoCPU = 0;
+        processosFinalizados = 0;
+        tempoNaoExecutado = "";
+        escalonadorRodando = "";
     }
 
     // Adiciona os processos na lista
@@ -111,7 +111,7 @@ public class Escalonador {
         textoExecucao += String.format("Throughput: %.2f processos/Unidade Tempo\n\n", throughput);
 
         if (!processosSaoAleatorios) {
-                                      
+
             textoExecucao += String.format("%-10s %-10s %-15s %-20s %-10s %-15s %-15s %-10s %-15s\n",
                     "Processo", "Estado", "Tempo CPU", "Turnaround Time", "Credito", "Response Time", "Waiting Time",
                     "Ordem", "Prioridade");
@@ -193,25 +193,23 @@ public class Escalonador {
         } else {
             addProcesso();
         }
+        tamanhoOriginalListaProcessos = listaProcessos.size(); // otmiização para while de escalonarProcesso
         escalonarProcesso();
     }
 
     public void escalonarProcesso() {
 
-       //while (!todosProcessosFinalizados()) { //antigo
-        while (processosFinalizados < listaProcessos.size()) {
+        while (processosFinalizados < tamanhoOriginalListaProcessos) {
             escalonadorRodando = ""; // limpa o print do escalonador rodando a cada ciclo
-            
+
             verificarRunning();
-            if (!existeProcessoRunning() && existeProcessoReadyCreditoMaior()) {
+            if (!existeProcessoRunning && existeProcessoReadyCreditoMaior()) {
                 escolheProcessoRunning();
             }
             executaProcesso();
             voltaBloqueio();
 
-            waitingTime();
-            turnaroundTime();
-            responseTime();
+            metricas();
             tempoGlobal++;
 
             if (!processosSaoAleatorios) {// se os processos não forem aleatorios printa a cada ciclo
@@ -226,16 +224,19 @@ public class Escalonador {
 
     public void verificarRunning() {
         escalonadorRodando += "o-> Verificando Processo Running\n";
+        existeProcessoRunning = false;
         for (int i = 0; i < listaProcessos.size(); i++) {
 
             if (listaProcessos.get(i).getEstado() == Processo.Estado.RUNNING) {
-               
+                existeProcessoRunning = true;
+
                 if (listaProcessos.get(i).getTempoTotal() == 0) {
                     escalonadorRodando += "---> Processo " + listaProcessos.get(i).getNomeProcesso() + " Finalizado\n";
                     listaProcessos.get(i).setEstado(Processo.Estado.EXIT);
-                    todosProcessosCreditoZero(); 
+                    todosProcessosCreditoZero();
                     listaProcessos.get(i).setExecutado(false);
                     processosFinalizados++;
+                    existeProcessoRunning = false;
                     return;
                 }
 
@@ -243,8 +244,9 @@ public class Escalonador {
                     listaProcessos.get(i).setEstado(Processo.Estado.BLOCKED);
                     escalonadorRodando += "---> Processo " + listaProcessos.get(i).getNomeProcesso()
                             + " movido para a fila de Bloqueados\n";
-                    listaProcessos.get(i).setSurtoCPUAtual(listaProcessos.get(i).getSurtoCPU());
-                    todosProcessosCreditoZero(); 
+                    listaProcessos.get(i).resetSurtoCPUatual();
+                    todosProcessosCreditoZero();
+                    existeProcessoRunning = false;
                     return;
                 }
 
@@ -253,7 +255,8 @@ public class Escalonador {
                             + " movido para a fila de Ready\n";
                     listaProcessos.get(i).setEstado(Processo.Estado.READY);
                     mudarOrdemTodosProcessos(listaProcessos.get(i));
-                    todosProcessosCreditoZero(); 
+                    todosProcessosCreditoZero();
+                    existeProcessoRunning = false;
                     return;
                 }
             }
@@ -299,11 +302,11 @@ public class Escalonador {
         for (int i = 0; i < listaProcessos.size(); i++) {
             if (listaProcessos.get(i).getEstado() == Processo.Estado.RUNNING) {
                 escalonadorRodando += "o-> Executando Processo " + listaProcessos.get(i).getNomeProcesso() + "\n";
-                listaProcessos.get(i).setSurtoCPUAtual(listaProcessos.get(i).getSurtoCPUAtual() - 1);
-                listaProcessos.get(i).setTempoTotal(listaProcessos.get(i).getTempoTotal() - 1);
-                listaProcessos.get(i).setCredito(listaProcessos.get(i).getCredito() - 1);
+                listaProcessos.get(i).decSurtoCPUAtual();
+                listaProcessos.get(i).decTempoTotal();
+                listaProcessos.get(i).decCredito();
                 tempoUsoCPU++;
-                listaProcessos.get(i).setTempoCPU(listaProcessos.get(i).getTempoCPU() + 1);
+                listaProcessos.get(i).incTempoCPU();
                 cpuNaoUtilizada = false;
                 return;
             }
@@ -324,10 +327,11 @@ public class Escalonador {
                             + " movido para a fila de Ready\n";
                     listaProcessos.get(i).setEstado(Processo.Estado.READY);
                     mudarOrdemTodosProcessos(listaProcessos.get(i));
-                    listaProcessos.get(i).setTempoESatual(listaProcessos.get(i).getTempoES());
+                    listaProcessos.get(i).resetTempoESatual();
                     todosProcessosCreditoZero(); // verifica se todos os processos da fila de ready estão com credito 0
                 } else {
-                    listaProcessos.get(i).setTempoESatual(listaProcessos.get(i).getTempoESatual() - 1);
+                    listaProcessos.get(i).decTempoESatual();
+
                     escalonadorRodando += "---> Processo " + listaProcessos.get(i).getNomeProcesso() +
                             " Tempo de E/S restante: " + listaProcessos.get(i).getTempoESatual() + "\n";
                 }
@@ -360,22 +364,14 @@ public class Escalonador {
 
     public void mudarOrdemTodosProcessos(Processo processo) {
         escalonadorRodando += "o-> Mudando a ordem de todos os Processos\n";
-        listaProcessos.get(listaProcessos.indexOf(processo)).setOrdem(listaProcessos.size()); // fica em ultimo da
+        listaProcessos.get(listaProcessos.indexOf(processo)).setOrdem(tamanhoOriginalListaProcessos); // fica em ultimo
+                                                                                                      // da
 
         for (int i = 0; i < listaProcessos.size(); i++) {
             if (listaProcessos.indexOf(processo) != i) {
                 listaProcessos.get(i).setOrdem(listaProcessos.get(i).getOrdem() - 1);
             }
         }
-    }
-
-    public boolean existeProcessoRunning() {
-        for (Processo processo : listaProcessos) {
-            if (processo.getEstado() == Processo.Estado.RUNNING) {
-                return true;
-            }
-        }
-        return false;
     }
 
     public boolean existeProcessoReadyCreditoMaior() {
@@ -388,31 +384,26 @@ public class Escalonador {
     }
 
     // Metricas
-    public void waitingTime() {
-        if(processosSaoAleatorios){return;} //caso os processos sejam aleatorios não é necessário calcular o waiting time
+    public void metricas() {
         for (int i = 0; i < listaProcessos.size(); i++) {
+            
+            // waiting time
             if (listaProcessos.get(i).getEstado() == Processo.Estado.READY) {
-                listaProcessos.get(i).setWaitingTime(listaProcessos.get(i).getWaitingTime() + 1);
+                listaProcessos.get(i).incWaitingTime();
             }
-        }
-    }
 
-    public void turnaroundTime() {
-        if(processosSaoAleatorios){return;} //caso os processos sejam aleatorios não é necessário calcular o turnaround time
-        for (int i = 0; i < listaProcessos.size(); i++) {
-            if (listaProcessos.get(i).isExecutado()) {
-                listaProcessos.get(i).setTurnaroundTime(listaProcessos.get(i).getTurnaroundTime() + 1);
-            }
-        }
-    }
+            // se nao tiver rodando os aleatorios
+            if (!processosSaoAleatorios) {
+                
+                // turnaround time
+                if (listaProcessos.get(i).isExecutado()) {
+                    listaProcessos.get(i).incTurnaroundTime();
+                }
 
-    public void responseTime() {
-        if(processosSaoAleatorios){return;} //caso os processos sejam aleatorios não é necessário calcular o response time
-        for (int i = 0; i < listaProcessos.size(); i++) {
-            if (listaProcessos.get(i).isExecutado() && listaProcessos.get(i).isResponse()
-                    && listaProcessos.get(i).getResponseTime() < 0) {
-                listaProcessos.get(i).setResponse(true);
-                listaProcessos.get(i).setResponseTime(tempoGlobal);
+                // response time
+                if (listaProcessos.get(i).isResponse() && listaProcessos.get(i).getResponseTime() < 0) {
+                    listaProcessos.get(i).setResponseTime(tempoGlobal);
+                }
             }
         }
     }

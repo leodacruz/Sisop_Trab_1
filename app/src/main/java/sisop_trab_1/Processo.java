@@ -57,6 +57,10 @@ public class Processo {
         this.turnaroundTime = tempoExecutado;
     }
 
+    public void incTurnaroundTime() {
+        this.turnaroundTime++;
+    }
+
     public void setEstado(Estado estado) {
         this.estado = estado;
     }
@@ -115,6 +119,11 @@ public class Processo {
         this.tempoTotal = tempoTotal;
     }
 
+    public void decTempoTotal() {
+        this.tempoTotal--;
+    }
+
+
     public int getOrdem() {
         return ordem;
     }
@@ -145,12 +154,24 @@ public class Processo {
         this.credito = creditos;
     }
 
+    public void decCredito() {
+        this.credito--;
+    }
+
     public int getTempoESatual() {
         return tempoESatual;
     }
 
     public void setTempoESatual(int tempoESatual) {
         this.tempoESatual = tempoESatual;
+    }
+
+    public void resetTempoESatual() {
+        this.tempoESatual = tempoES;
+    }
+
+    public void decTempoESatual() {
+        this.tempoESatual--;
     }
 
     public int getSurtoCPUAtual() {
@@ -161,8 +182,21 @@ public class Processo {
         this.surtoCPUAtual = surtoCPUAtual;
     }
 
+    public void resetSurtoCPUatual() {
+        this.surtoCPUAtual = surtoCPU;
+    }
+
+    public void decSurtoCPUAtual() {
+        this.surtoCPUAtual--;
+    }
+
+
     public void setTempoCPU(int tempoCPU) {
         this.tempoCPU = tempoCPU;
+    }
+
+    public void incTempoCPU() {
+        this.tempoCPU++;
     }
 
     public int getWaitingTime() {
@@ -172,6 +206,11 @@ public class Processo {
     public void setWaitingTime(int waitTime) {
         this.waitingTime = waitTime;
     }
+
+    public void incWaitingTime() {
+        this.waitingTime++;
+    }
+
 
     @Override
     public String toString() {
