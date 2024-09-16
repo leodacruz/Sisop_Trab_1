@@ -38,3 +38,7 @@ sendo o x um numero, exemplo: gradlew run --args='10'
 ## linux
 #### ./gradlew run --args='x'     
 sendo o x um numero, exemplo: ./gradlew run --args='10'
+
+
+# Imagem
+existe uma imagem que mostra um mapa de como os metodos funcionam, pode ajudar a entender a logica absurda atual
