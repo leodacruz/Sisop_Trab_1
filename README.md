@@ -32,7 +32,9 @@ um limite nos parametros que são os seguintes:
 
 
 ## windows
-#### gradlew run --args='x'     sendo o x um numero, exemplo: gradlew run --args='10'
+#### gradlew run --args='x'     
+sendo o x um numero, exemplo: gradlew run --args='10'
 
 ## linux
-#### ./gradlew run --args='x'     sendo o x um numero, exemplo: ./gradlew run --args='10'
+#### ./gradlew run --args='x'     
+sendo o x um numero, exemplo: ./gradlew run --args='10'
