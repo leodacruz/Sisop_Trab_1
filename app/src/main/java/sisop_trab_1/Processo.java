@@ -12,7 +12,7 @@ public class Processo {
 
     private int tempoCPU;
 
-    private boolean executado;
+    private boolean executado; //(turnaround time)
     private int turnaroundTime;
 
     private boolean response;
@@ -24,7 +24,7 @@ public class Processo {
 
     private int credito;
 
-    private int waitTime;
+    private int waitingTime;
 
     public Processo() {
         this.estado = Estado.READY;
@@ -34,7 +34,7 @@ public class Processo {
         this.response = false;
         this.executado = true; // pq ja comecam na fila de ready
         this.responseTime = -1;
-        this.waitTime = 0;
+        this.waitingTime = 0;
     }
 
     public int getTempoCPU() {
@@ -55,6 +55,10 @@ public class Processo {
 
     public void setTurnaroundTime(int tempoExecutado) {
         this.turnaroundTime = tempoExecutado;
+    }
+
+    public void incTurnaroundTime() {
+        this.turnaroundTime++;
     }
 
     public void setEstado(Estado estado) {
@@ -115,6 +119,11 @@ public class Processo {
         this.tempoTotal = tempoTotal;
     }
 
+    public void decTempoTotal() {
+        this.tempoTotal--;
+    }
+
+
     public int getOrdem() {
         return ordem;
     }
@@ -129,12 +138,12 @@ public class Processo {
 
     public void setPrioridade(int prioridade) {
         this.prioridade = prioridade;
-        if(prioridade==0){
+        if (prioridade == 0) {
             this.credito = 1;
-        }else{
-        this.credito = prioridade;    
+        } else {
+            this.credito = prioridade;
         }
-        
+
     }
 
     public int getCredito() {
@@ -145,8 +154,8 @@ public class Processo {
         this.credito = creditos;
     }
 
-    public enum Estado {
-        READY, RUNNING, BLOCKED, EXIT
+    public void decCredito() {
+        this.credito--;
     }
 
     public int getTempoESatual() {
@@ -157,6 +166,14 @@ public class Processo {
         this.tempoESatual = tempoESatual;
     }
 
+    public void resetTempoESatual() {
+        this.tempoESatual = tempoES;
+    }
+
+    public void decTempoESatual() {
+        this.tempoESatual--;
+    }
+
     public int getSurtoCPUAtual() {
         return surtoCPUAtual;
     }
@@ -165,16 +182,50 @@ public class Processo {
         this.surtoCPUAtual = surtoCPUAtual;
     }
 
+    public void resetSurtoCPUatual() {
+        this.surtoCPUAtual = surtoCPU;
+    }
+
+    public void decSurtoCPUAtual() {
+        this.surtoCPUAtual--;
+    }
+
+
     public void setTempoCPU(int tempoCPU) {
         this.tempoCPU = tempoCPU;
     }
 
-    public int getWaitTime() {
-        return waitTime;
+    public void incTempoCPU() {
+        this.tempoCPU++;
     }
 
-    public void setWaitTime(int waitTime) {
-        this.waitTime = waitTime;
+    public int getWaitingTime() {
+        return waitingTime;
+    }
+
+    public void setWaitingTime(int waitTime) {
+        this.waitingTime = waitTime;
+    }
+
+    public void incWaitingTime() {
+        this.waitingTime++;
+    }
+
+
+    @Override
+    public String toString() {
+        return "Processo {\n" +
+                "    nome='" + nomeProcesso + "',\n" +
+                "    surtoCPU=" + surtoCPU + ",\n" +
+                "    tempoES=" + tempoES + ",\n" +
+                "    tempoTotal=" + tempoTotal + ",\n" +
+                "    ordem=" + ordem + ",\n" +
+                "    prioridade=" + prioridade + "\n" +
+                '}' + "\n";
+    }
+
+    public enum Estado {
+        READY, RUNNING, BLOCKED, EXIT
     }
 
 }
