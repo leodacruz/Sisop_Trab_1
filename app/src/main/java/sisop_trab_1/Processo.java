@@ -12,7 +12,7 @@ public class Processo {
 
     private int tempoCPU;
 
-    private boolean executado;
+    private boolean executado; //(turnaround time)
     private int turnaroundTime;
 
     private boolean response;
@@ -24,7 +24,7 @@ public class Processo {
 
     private int credito;
 
-    private int waitTime;
+    private int waitingTime;
 
     public Processo() {
         this.estado = Estado.READY;
@@ -34,7 +34,7 @@ public class Processo {
         this.response = false;
         this.executado = true; // pq ja comecam na fila de ready
         this.responseTime = -1;
-        this.waitTime = 0;
+        this.waitingTime = 0;
     }
 
     public int getTempoCPU() {
@@ -129,12 +129,12 @@ public class Processo {
 
     public void setPrioridade(int prioridade) {
         this.prioridade = prioridade;
-        if(prioridade==0){
+        if (prioridade == 0) {
             this.credito = 1;
-        }else{
-        this.credito = prioridade;    
+        } else {
+            this.credito = prioridade;
         }
-        
+
     }
 
     public int getCredito() {
@@ -143,10 +143,6 @@ public class Processo {
 
     public void setCredito(int creditos) {
         this.credito = creditos;
-    }
-
-    public enum Estado {
-        READY, RUNNING, BLOCKED, EXIT
     }
 
     public int getTempoESatual() {
@@ -169,12 +165,28 @@ public class Processo {
         this.tempoCPU = tempoCPU;
     }
 
-    public int getWaitTime() {
-        return waitTime;
+    public int getWaitingTime() {
+        return waitingTime;
     }
 
-    public void setWaitTime(int waitTime) {
-        this.waitTime = waitTime;
+    public void setWaitingTime(int waitTime) {
+        this.waitingTime = waitTime;
+    }
+
+    @Override
+    public String toString() {
+        return "Processo {\n" +
+                "    nome='" + nomeProcesso + "',\n" +
+                "    surtoCPU=" + surtoCPU + ",\n" +
+                "    tempoES=" + tempoES + ",\n" +
+                "    tempoTotal=" + tempoTotal + ",\n" +
+                "    ordem=" + ordem + ",\n" +
+                "    prioridade=" + prioridade + "\n" +
+                '}' + "\n";
+    }
+
+    public enum Estado {
+        READY, RUNNING, BLOCKED, EXIT
     }
 
 }
